@@ -1,3 +1,5 @@
+import re
+
 CAL_START = "N:STANDARD\nTZOFFSETFROM:-0400\nTZOFFSETTO:-0500\nTZNAME:EST\
         \nDTSTART:19701101T020000\nRRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU\
         \nEND:STANDARD\nEND:VTIMEZONE\n"
@@ -128,7 +130,7 @@ TIMES = "times"
 LOCATION = "location"
 INSTRUCTOR = "instructor"
 
-def processRow(row, currentCourse):
+def processRow(row, currentCourse, section, title):
 
     cells = extract(row, "td")
     #print("-------------------")
@@ -145,25 +147,32 @@ def processRow(row, currentCourse):
     print ("no more cells")
     print() 
     print "currentCourse: ", currentCourse
-    if currentCourse == '':
-        data[CODE] = extract_str(cells[0])
-        print "course", extract_str(cells[0]) 
-        currentCourse = extract_str(cells[0]) 
+    if 'nbsp' in (cells[0] + cells[1] + cells[2]):
+         
+        data[CODE] = currentCourse
+        data[SECTION] = section
+        data[TITLE] = title
 
-        print currentCourse
+    elif currentCourse == '' or currentCourse == None:
+        data[CODE] = extract_str(cells[0])
+        currentCourse = extract_str(cells[0]) 
+        section = extract_str(cells[1])
+        title = extract_str(cells[2])
     else: 
-        data[courseInfo[CODE]] = currentCourse
+        data[CODE] = currentCourse
+        data[SECTION] = section
+        data[TITLE] = title
 
     print "currentCourse: ", currentCourse
     data[TITLE] = extract_str(cells[2])
-    data[TYPE] = currentCourse[-1]
+    data[TYPE] = data[TITLE][-1]
     data[SEMESTER] = extract_str(cells[1])
     data[SECTION] = extract_str(cells[3])
     data[TIMES] = extract_str(cells[5])
     data[LOCATION] = extract_str(cells[6])
     data[INSTRUCTOR] = extract_str(cells[7])
  
-    return data, currentCourse 
+    return data, currentCourse, section, title
 
 
 
@@ -182,11 +191,14 @@ def rowToICalEvent(row):
 
     WEEKDAYS = [MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY, SUNDAY]
     RAW_TO_DAY = {'M': MONDAY,
-            'T': TUESDAY,
-            'W': WEDNESDAY,
-            'R': THURSDAY,
-            'F': FRIDAY}
+                    'T': TUESDAY,
+                'W': WEDNESDAY,
+                'R': THURSDAY,
+                'F': FRIDAY}
 
+    
+    
+    
     timeSlots = row[TIMES]
 
 
@@ -197,31 +209,46 @@ def rowToICalEvent(row):
 
      # get day number of start date
     BASE_START_DAY = 5
-    startDay = str(BASE_START_DAY) + str(WEEKDAYS.index(RAW_TO_DAY[timeSlots[0]]))  + "T"
+    startDay = str(BASE_START_DAY + WEEKDAYS.index(RAW_TO_DAY[timeSlots[0]]))  + "T"
     startDate = START_DATE1 + startDay                         #iCal startDate
-
-
-    # create iCal str of days and timing this event reoccurs at
-    if timeSlots[-2].isalnum():
-        readUpTo = -2
-    else:
-        readUpTo = -1
     
-    startTime = ord(timeSlots[readUpTo]) - 47
-    # to convert char to int, subtract 48
-    # end time is one hr later, add 1
-    endTime = chr(ord(timeSlots[readUpTo]) - 47) + "00"
+    timeIndex = re.search('\d', row[TIMES]).start()
     
-    repDays = ""
-    for char in timeSlots[:readUpTo]:
-        if char == timeSlots[:-3]:
-            repDays = repDays + RAW_TO_DAY[char]
+    repDays = row[TIMES][:timeIndex]
+    
+    timings = row[TIMES][timeIndex:]
+    
+    t0 = timings.split("-")
+    if len (t0) == 1: 
+
+        if len (t0[0]) == 1:
+            startTime = '0' + t0[0]
+            numStartTime = ord(t0[0]) - 48
+        else:
+            startTime = t0[0]
+            numStartTime = (ord(t0[0][0])-48)*10 + (ord(t0[0][1]) - 48)
+
+        numEndTime = numStartTime + 1
+        endTime = ''
+        
+        if numEndTime >=10:
+            endTime = str(numEndTime)
         else: 
-            repDays = repDays + RAW_TO_DAY[char] + ", "
+            endTime = '0' + str(numEndTime)
 
-    startDate = startDate + startTime
-    dateEnd = START_DATE1 + "T" + startTime
-    endDate = END_DATE + endTime
+    else:
+        startTime = t0[0]
+        print("t0", t0)
+        endTime = t0[1]
+    # create iCal str of days and timing this event reoccurs at
+    iCal_rep_days = RAW_TO_DAY[repDays[0]]
+    for i in range(1, len(repDays), 1):
+        repDays = repDays + ', ' +  RAW_TO_DAY[repDays[i]]
+
+
+    dateEnd = startDate + endTime + '0000'
+    startDate = startDate + startTime + '0000'
+    endDate = END_DATE + endTime+ '0000'
     # iCal event text description
     #courseInfo[]
     descr = row[CODE] + " - " + row[SECTION] + "\\n" \
@@ -253,31 +280,34 @@ row = getRawRow(fi)
 
 print "-----------------------"
 i = 0               # number of rows to read from input
-while (i!= 3):
+while (i!= 10):
     # extract the raw html data in a single row
     row = getRawRow(fi) 
     currentCourse = ""
+    section = ""
+    title = ""
     processedRow = []
 
     if (i > 1): 
         print 'current course', currentCourse
-        print("--------RAW")
-        print 'ROW'
-        print row
-        
+        print("===================================--------RAW")
+        print 'ROW: ', i
+        print "===========================================" 
         # extract data from html
-        processedRow, currentCourse = processRow(row, currentCourse)
-        print "---------PROCESSED ROW ", processedRow
+        processedRow, currentCourse, section, title= processRow(row, currentCourse, section, title)
+        
+        print "currentCourse: ", currentCourse
         #print ("---PROCESSED")
         #print (processedRow)
-        processedRows.append(processedRow)   # remove later
+        if processedRow[SEMESTER] == 'S':
+            processedRows.append(processedRow)   # remove later
 
-        # parse data to ical
-        iCalEvent = rowToICalEvent(processedRow)
-        #print ("--- PARSED ICAL")
-        #print(iCalEvent)
-        #print("-----------")
-        fo.write(iCalEvent)
+            # parse data to ical
+            iCalEvent = rowToICalEvent(processedRow)
+            #print ("--- PARSED ICAL")
+            #print(iCalEvent)
+            #print("-----------")
+            fo.write(iCalEvent)
 
     i = i + 1
 
