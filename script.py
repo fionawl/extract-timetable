@@ -12,33 +12,33 @@ def makeTags(tag):
 #parse html
 # extract content in multiple pairs of the given tag
 def extract(s, tag):
-    print ("***********************************************************") 
+    #print ("***********************************************************") 
     if s != None:
         tags = makeTags(tag)
         contents = []
-        print "tags", tags
-        print "unprocessed:", s 
+        #print "tags", tags
+        #print "unprocessed:", s 
 
         #start tags may contain tag with attributes set in it, 
         s0 = s.split(tags[0][:-1])        #split on "<tr" instead of "<tr>"
         # assumed that html is well formed
         del s0[0]
-        print "s0:", s0
+        #print "s0:", s0
 
         for thing in s0:
-            print "thing: ", thing
+            #print "thing: ", thing
             if thing[0] == '>':           #start tag contains no attributes
-                print 'has no attributes in start tag'
+                #print 'has no attributes in start tag'
                 thang = thing[1:].split(tags[1])[0]
                 contents.append(thang)
-                print 'thang', thang
+                #print 'thang', thang
 
             else:                         #start tag contains attributes
-                print "has attributes in start tag"
+                #print "has attributes in start tag"
                 thang = thing[thing.index(">")+1:].split(tags[1])[0]
-                print 'thang', thang
+                #print 'thang', thang
                 contents.append(thang)
-        print("************************************************************")
+        #print("************************************************************")
         return contents
 
         #unprocessed = s.split(tags[0])
@@ -55,17 +55,17 @@ def extract(s, tag):
         #print 'content', content
         #return innerContent
     return s 
-print("************************************************************")
-print('TESTING EXTRACT: ')
+#print("************************************************************")
+#print('TESTING EXTRACT: ')
 #print (extract("sdf<tr>this is </tr>sdfs s fsdf <tr>the content</tr>sdfsdf", "tr"))
 #print (extract("dsfsdfsdf<b>sdf</b>jsdklfjdksfjd<table>table reached</table>sdfdsfdsf<hisdfkdfj<table>table 2 reached</table>sdfdsf<hi>Hdsfsdf</hi>", "table"))
 #print (extract("not content<tr>hello this is the content</tr>not content", "tr"))
 #print (extract("<td>1</td><td>2</td>  <td>3</td>", "td"))
 # will fail on tag with attributes in them
 #print(extract("<tr attr=12>content</tr>", "tr"))
-print(extract("<tr atrt=122 123123 12 31 23 1>one</tr><tr>two</tr>", "tr"))
-print("************************************************************")
-print('TESTING EXTRACT: ')
+#print(extract("<tr atrt=122 123123 12 31 23 1>one</tr><tr>two</tr>", "tr"))
+#print("************************************************************")
+#print('TESTING EXTRACT: ')
 
 def extract_courseCode(href):
     if (href != None):
@@ -108,9 +108,34 @@ def getRawRow(fo):
             line = fo.readline()
         unproc = unproc + line.split(end)[0] + end
 
-        return extract(unproc, tag)
+        return extract(unproc, tag)[0]
 
     return None
+
+''' Extract the human-readable text content within the given html tags '''
+
+def extract_str(s):
+    i = 0
+    print "IN EXTRACT_STR"
+    print "str: ", s
+
+    while (i < len (s)):
+        if s[i] == '>':
+            start = i
+            print 'start', start
+            s0 = s[i+1:]
+            print "s0", s0 
+            print 'end', 
+            end = s0.index('<') + i
+            if end - start > 1:
+               print "FINALLY THE INNER CONTENT"
+               return s[start+1:end+1]
+        print "done an itr"
+        i = i + 1
+    return s
+
+#print(extract_str("<><><>hello<>"))
+
 
 
 ''' From a single row's html content, return an array of a course's information.
@@ -147,15 +172,16 @@ def processRow(row, currentCourse):
     #print('row:', row)
 
     cells = extract(row, "td")
-    #print("cells", cells)
-    #process individual cells
+    print("-------------------")
+    print ("HERE ARE THE CELLS")
 
-    #print ("here are the cells")
     for cell in cells: 
+        print "cell"
         print (cell)
-        print("cell content: ")
+        print ("cell content: ")
         print (extract_str(cell))
-    prin ("no more cells")
+    
+    print ("no more cells")
     #print() 
 
     courseCode = extract_courseCode(cells[courseInfo['code']])
@@ -252,39 +278,44 @@ def rowToICalEvent(row):
 
 ''' do the magic.
 '''
-#processedRows = []
-#fi = open("csc.html", "r+")
-#fo = open("output.ical", "wb")
-#fo.write(CAL_START)
-#row = getRawRow(fi)
-##print("getting raw row", row)
+processedRows = []
+fi = open("csc.html", "r+")
+fo = open("output.ical", "wb")
+fo.write(CAL_START)
+row = getRawRow(fi)
+#print("getting raw row", row)
 
-#i = 0               # number of rows to read from input
-#while (i!= 5):
-    ## extract the raw html data in a single row
-    #row = getRawRow(fi)
-    #currentCourse = ""
-    #processedRow = []
+print "-----------------------"
+i = 0               # number of rows to read from input
+while (i!= 7):
+    # extract the raw html data in a single row
+    row = getRawRow(fi) 
+    currentCourse = ""
+    processedRow = []
 
-    #if (i > 1): 
-        ##print("--------RAW")
-        ##print (row)
-        ## extract data from html
-        #processedRow, currentCourse = processRow(row, currentCourse)
-        ##print ("---PROCESSED")
-        ##print (processedRow)
-        #processedRows.append(processedRow)   # remove later
+    if (i > 1): 
+        print 'current course', currentCourse
+        print("--------RAW")
+        print 'ROW'
+        print row
+        
+        # extract data from html
+        processedRow, currentCourse = processRow(row, currentCourse)
+        
+        #print ("---PROCESSED")
+        #print (processedRow)
+        processedRows.append(processedRow)   # remove later
 
-        ## parse data to ical
-        #iCalEvent = rowToICalEvent(processedRow)
-        ##print ("--- PARSED ICAL")
-        ##print(iCalEvent)
-        ##print("-----------")
-        #fo.write(iCalEvent)
+        # parse data to ical
+        iCalEvent = rowToICalEvent(processedRow)
+        #print ("--- PARSED ICAL")
+        #print(iCalEvent)
+        #print("-----------")
+        fo.write(iCalEvent)
 
-    #i = i + 1
+    i = i + 1
 
-#fo.write(CAL_END)
+fo.write(CAL_END)
 
-#fi.close()
-#fo.close()
+fi.close()
+fo.close()
