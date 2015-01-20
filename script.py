@@ -67,6 +67,7 @@ def extract(s, tag):
 #print("************************************************************")
 #print('TESTING EXTRACT: ')
 
+'''extract_str replaces this function ''' 
 def extract_courseCode(href):
     if (href != None):
         return href.split("#")[1]
