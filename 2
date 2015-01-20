@@ -1,32 +1,8 @@
 import re
 
-CAL_START = "BEGIN:VCALENDAR" + \
-            "\nPRODID:-//Google Inc//Google Calendar 70.9054//EN" +  \
-            "\nVERSION:2.0" + \
-            "\nCALSCALE:GREGORIAN" + \
-            "\nMETHOD:PUBLISH" + \
-            "\nX-WR-CALNAME:tester" + \
-            "\nX-WR-TIMEZONE:America/Toronto" + \
-            "\nX-WR-CALDESC: " + \
-            "\nBEGIN:VTIMEZONE" + \
-            "\nTZID:America/Toronto" + \
-            "\nX-LIC-LOCATION:America/Toronto" + \
-            "\nBEGIN:DAYLIGHT" + \
-            "\nTZOFFSETFROM:-0500" +  \
-            "\nTZOFFSETTO:-0400" + \
-            "\nTZNAME:EDT" + \
-            "\nDTSTART:19700308T020000" + \
-            "\nRRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=2SU" + \
-            "\nEND:DAYLIGHT" + \
-            "\nBEGIN:STANDARD" + \
-            "\nTZOFFSETFROM:-0400" + \
-            "\nTZOFFSETTO:-0500" + \
-            "\nTZNAME:EST" + \
-            "\nDTSTART:19701101T020000" + \
-            "\nRRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU" + \
-            "\nEND:STANDARD" + \
-            "\nEND:VTIMEZONE\n"
-        
+CAL_START = "N:STANDARD\nTZOFFSETFROM:-0400\nTZOFFSETTO:-0500\nTZNAME:EST\
+        \nDTSTART:19701101T020000\nRRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU\
+        \nEND:STANDARD\nEND:VTIMEZONE\n"
 
 CAL_END = "END:VCALENDAR\n"
 
@@ -174,26 +150,22 @@ def processRow(row):
     print() 
     
     
-    if ('nbsp' in (cells[0] + cells[1] + cells[2])) or cells[0] == '' or cells[0] == None:
+    if ()'nbsp' in (cells[0] + cells[1] + cells[2])) or cells[0] == '' or cells[0] == None:
         data[CODE] = processRow.currentCourse
         data[SECTION] = processRow.section
         data[TITLE] = processRow.title
 
-    else:
+    else:l
         data[CODE] = extract_str(cells[0])
-        data[SECTION] = extract_str(cells[1]) 
-        data[TITLE] = extract_str(cells[2])
-        processRow.currentCourse = data.get(CODE) 
-        processRow.section = data.get(SECTION)
-        processRow.title= data.get(TITLE) 
-    print "cell[7]", cells[7]
+        processRow.currentCourse = extract_str(cells[0]) 
+        processRow.section = extract_str(cells[1])
+        processRow.title= extract_str(cells[2])
+
     print "currentCourse: ", processRow.currentCourse
-    print "section", processRow.section
-    print "title", processRow.title
-
-
-    data[TYPE] = data.get(TITLE)[-1]
+    data[TITLE] = extract_str(cells[2])
+    data[TYPE] = data[TITLE][-1]
     data[SEMESTER] = extract_str(cells[1])
+    data[SECTION] = extract_str(cells[3])
     data[TIMES] = extract_str(cells[5])
     data[LOCATION] = extract_str(cells[6])
     data[INSTRUCTOR] = extract_str(cells[7])
@@ -269,16 +241,14 @@ def rowToICalEvent(row):
         print("t0", t0)
         endTime = t0[1]
     # create iCal str of days and timing this event reoccurs at
-    iCal_repDays = RAW_TO_DAY[repDays[0]]
+    iCal_rep_days = RAW_TO_DAY[repDays[0]]
     for i in range(1, len(repDays), 1):
-        iCal_repDays = iCal_repDays + ', ' +  RAW_TO_DAY[repDays[i]]
- 
+        repDays = repDays + ', ' +  RAW_TO_DAY[repDays[i]]
 
-    print 'repDays:', repDays
 
     dateEnd = startDate + endTime + '0000'
     startDate = startDate + startTime + '0000'
-    endDate = END_DATE + endTime+ '0000Z'
+    endDate = END_DATE + endTime+ '0000'
     # iCal event text description
     #courseInfo[]
     descr = row[CODE] + " - " + row[SECTION] + "\\n" \
@@ -286,17 +256,15 @@ def rowToICalEvent(row):
             + row[TIMES] + "\\n" + row[LOCATION]
 
     # return final iCal scipt for event
-    return  "\nBEGIN:VEVENT"\
-            + "\nDTSTART;TZID=America/Toronto:" + startDate\
-            + "\nDTEND;TZID=America/Toronto:" + dateEnd\
-            + "\nRRULE:FREQ=WEEKLY;UNTIL=" + endDate + ";BYDAY=" + iCal_repDays\
-            + "\nDESCRIPTION:" + descr \
-            + "\nLOCATION:" + row[LOCATION]\
-            + "\nSEQUENCE:1" \
-            + "\nSTATUS:CONFIRMED" \
-            + "\nSUMMARY:" + row[TITLE]\
-            + "\nTRANSP:OPAQUE" \
-            + "\nEND:VEVENT\n"
+    return  "\\nBEGIN:VEVENT"\
+            + "\\nDTSTART;TZID=America/Toronto:" + startDate\
+            + "\\nDTEND;TZID=America/Toronto:" + dateEnd\
+            + "\\nRRULE:FREQ=WEEKLY;UNTIL=" + endDate + "T130000Z;BYDAY=" + repDays\
+            + "\\nDESCRIPTION:" + descr \
+            + "\\nSEQUENCE:1" \
+            + "\\nSUMMARY:" + row[TITLE]\
+            + "\\nTRANSP:OPAQUE" \
+            + "\\nEND:VEVENT\n"
 
 
 
@@ -312,7 +280,7 @@ row = getRawRow(fi)
 
 print "-----------------------"
 i = 0               # number of rows to read from input
-while (i!= 300):
+while (i!= 10):
     # extract the raw html data in a single row
     row = getRawRow(fi) 
     currentCourse = ""
@@ -329,11 +297,14 @@ while (i!= 300):
         print "currentCourse: ", currentCourse
         print processedRow[SEMESTER]
         #print (processedRow)
-        if processedRow[SEMESTER] == "S" or processedRow[SEMESTER] == 'Y':
+        if processedRow[SEMESTER] == "S":
             processedRows.append(processedRow)   # remove later
 
             # parse data to ical
             iCalEvent = rowToICalEvent(processedRow)
+            #print ("--- PARSED ICAL")
+            #print(iCalEvent)
+            #print("-----------")
             fo.write(iCalEvent)
 
     i = i + 1
