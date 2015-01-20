@@ -73,39 +73,6 @@ def extract_courseCode(href):
         return href.split("#")[1]
     return href
 
-#def extract_val(s):
-    #i = 0
-
-    #while (i < len (s)):
-        #if s[i] == '>':
-            #start = i
-            #end = s[i+1:].index('<') + i
-            #if end - start > 1:
-                #return s[start+1:end+1]
-        #i = i + 1
-    #return s
-
-
-#''' Extract the human-readable text content within the given html tags '''
-
-#def extract_str(s):
-    #i = 0
-
-    #while (i < len (s)):
-        #if s[i] == '>':
-            #start = i
-            #s0 = s[i+1:]
-            #return s0.split("<")[0]
-        #i = i + 1
-    #return s
-
-##print(extract_str("<><><>hello<>"))
-
-
-
-
-
-
 def extract_str(s):
     s0 = s.split(">")
     for thing in s0:
@@ -161,14 +128,6 @@ TIMES = "times"
 LOCATION = "location"
 INSTRUCTOR = "instructor"
 
-courseInfo = {CODE: 0,
-        TITLE: 1,
-        TYPE: 2,
-        SEMESTER: 3,
-        SECTION: 4,
-        TIMES: 5,
-        LOCATION: 6, 
-        INSTRUCTOR: 7}
 def processRow(row, currentCourse):
 
     cells = extract(row, "td")
@@ -181,11 +140,13 @@ def processRow(row, currentCourse):
         print "cell #", j
         print (extract_str(cell))
         j = j + 1
+    if len (cells) < 5:  
+        return None
     print ("no more cells")
     print() 
     print "currentCourse: ", currentCourse
     if currentCourse == '':
-        data[courseInfo[CODE]] = extract_str(cells[0])
+        data[CODE] = extract_str(cells[0])
         print "course", extract_str(cells[0]) 
         currentCourse = extract_str(cells[0]) 
 
@@ -194,27 +155,21 @@ def processRow(row, currentCourse):
         data[courseInfo[CODE]] = currentCourse
 
     print "currentCourse: ", currentCourse
-    data[courseInfo[TITLE]] = extract_str(cells[2])
-    data[courseInfo[TYPE]] = currentCourse[-1]
-    data[courseInfo[SEMESTER]] = extract_str(cells[1])
-    data[courseInfo[SECTION]] = extract_str(cells[3])
-    data[courseInfo[TIMES]] = extract_str(cells[5])
-    data[courseInfo[LOCATION]] = extract_str(cells[6])
-    data[courseInfo[INSTRUCTOR]] = extract_str(cells[7])
+    data[TITLE] = extract_str(cells[2])
+    data[TYPE] = currentCourse[-1]
+    data[SEMESTER] = extract_str(cells[1])
+    data[SECTION] = extract_str(cells[3])
+    data[TIMES] = extract_str(cells[5])
+    data[LOCATION] = extract_str(cells[6])
+    data[INSTRUCTOR] = extract_str(cells[7])
  
     return data, currentCourse 
-    #return  ([courseCode, \
-            #cells[courseInfo['title']], \
-            #courseType, \
-            #[cells[courseInfo['semester']]], \
-            #[cells[courseInfo['section']]], \
-            #[cells[courseInfo['time']]], \
-            #[cells[courseInfo['location']]], \
-            #[cells[courseInfo['instructor']]]], currentCourse)
+
+
 
 
 '''
-    Parse row data to iCal event. 
+    Parse processed row data to iCal event. 
 '''
 def rowToICalEvent(row):
     MONDAY = "MO"
@@ -242,48 +197,47 @@ def rowToICalEvent(row):
 
      # get day number of start date
     BASE_START_DAY = 5
-    startDay = BASE_START_DAY + WEEKDAYS.index(RAW_TO_DAY[timeSlots[0]])  + "T"
+    startDay = str(BASE_START_DAY) + str(WEEKDAYS.index(RAW_TO_DAY[timeSlots[0]]))  + "T"
     startDate = START_DATE1 + startDay                         #iCal startDate
 
+
+    # create iCal str of days and timing this event reoccurs at
+    if timeSlots[-2].isalnum():
+        readUpTo = -2
+    else:
+        readUpTo = -1
+    
+    startTime = ord(timeSlots[readUpTo]) - 47
+    # to convert char to int, subtract 48
+    # end time is one hr later, add 1
+    endTime = chr(ord(timeSlots[readUpTo]) - 47) + "00"
+    
     repDays = ""
     for char in timeSlots[:readUpTo]:
         if char == timeSlots[:-3]:
-            repDays = repDays + rawToDay[char]
+            repDays = repDays + RAW_TO_DAY[char]
         else: 
-            repDays = repDays + rawToDay[char] + ", "
+            repDays = repDays + RAW_TO_DAY[char] + ", "
 
     startDate = startDate + startTime
-    endDate = endDate + endTime
-
-    # create iCal str of days and timing this event reoccurs at
-    if timing[-2].isAlpha():
-        startTime = chr(baseStart + timeSlot[-2]) + "00"
-        endTime = chr(timeSlots[-1]) + "00" 
-        readUpTo = -2
-
-    else:
-        startTime = chr(baseStart + timeSlots[-1]) + "00"
-        # to convert char to int, subtract 48
-        # end time is one hr later, add 1
-        endTime = chr(ord(timeSlots[-1]) - 47) + "00"
-        readUpTo = -1
-
+    dateEnd = START_DATE1 + "T" + startTime
+    endDate = END_DATE + endTime
     # iCal event text description
     #courseInfo[]
-    descr = row[CODE] + " - " + row[SECTION] + "\n" \
-            + row[TITLE]  + "\n" + row[INSTRUCTOR] + "\n\n" \
-            + row[TIMES] + "\n" + row[LOCATION]
+    descr = row[CODE] + " - " + row[SECTION] + "\\n" \
+            + row[TITLE]  + "\\n" + row[INSTRUCTOR] + "\\n\\n" \
+            + row[TIMES] + "\\n" + row[LOCATION]
 
     # return final iCal scipt for event
-    return  "\nBEGIN:VEVENT"\
-            + "\nDTSTART;TZID=America/Toronto:" + startDate\
-            + "\nDTEND;TZID=America/Toronto:" + endDate\
-            + "\nRRULE:FREQ=WEEKLY;UNTIL=" + dateEnd + "T130000Z;BYDAY=" + repDays\
-            + "\nDESCRIPTION:" + descr \
-            + "\nSEQUENCE:1" \
-            + "\nSUMMARY:" + courseTitle\
-            + "\nTRANSP:OPAQUE" \
-            + "\nEND:VEVENT\n"
+    return  "\\nBEGIN:VEVENT"\
+            + "\\nDTSTART;TZID=America/Toronto:" + startDate\
+            + "\\nDTEND;TZID=America/Toronto:" + dateEnd\
+            + "\\nRRULE:FREQ=WEEKLY;UNTIL=" + endDate + "T130000Z;BYDAY=" + repDays\
+            + "\\nDESCRIPTION:" + descr \
+            + "\\nSEQUENCE:1" \
+            + "\\nSUMMARY:" + row[TITLE]\
+            + "\\nTRANSP:OPAQUE" \
+            + "\\nEND:VEVENT\n"
 
 
 
@@ -299,7 +253,7 @@ row = getRawRow(fi)
 
 print "-----------------------"
 i = 0               # number of rows to read from input
-while (i!= 7):
+while (i!= 3):
     # extract the raw html data in a single row
     row = getRawRow(fi) 
     currentCourse = ""
@@ -313,7 +267,7 @@ while (i!= 7):
         
         # extract data from html
         processedRow, currentCourse = processRow(row, currentCourse)
-        
+        print "---------PROCESSED ROW ", processedRow
         #print ("---PROCESSED")
         #print (processedRow)
         processedRows.append(processedRow)   # remove later
