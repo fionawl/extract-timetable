@@ -192,6 +192,8 @@ def processRow(row):
     print "title", processRow.title
 
 
+    print "--------------------"
+    print "cell[7]", cells[7]
     data[TYPE] = data.get(TITLE)[-1]
     data[SEMESTER] = extract_str(cells[1])
     data[TIMES] = extract_str(cells[5])
@@ -237,6 +239,10 @@ def rowToICalEvent(row):
 
      # get day number of start date
     BASE_START_DAY = 5
+    
+    print "------------------------------------!!!!!!!!"
+    print "row:", row
+    print "timeslots: ", timeSlots
     startDay = str(BASE_START_DAY + WEEKDAYS.index(RAW_TO_DAY[timeSlots[0]]))  + "T"
     startDate = START_DATE1 + startDay                         #iCal startDate
     
@@ -260,6 +266,8 @@ def rowToICalEvent(row):
         endTime = ''
         
         if numEndTime >=10:
+            if numEndTime == 12:
+                endTime = '01'
             endTime = str(numEndTime)
         else: 
             endTime = '0' + str(numEndTime)
@@ -275,7 +283,6 @@ def rowToICalEvent(row):
  
 
     print 'repDays:', repDays
-
     dateEnd = startDate + endTime + '0000'
     startDate = startDate + startTime + '0000'
     endDate = END_DATE + endTime+ '0000Z'
@@ -294,7 +301,7 @@ def rowToICalEvent(row):
             + "\nLOCATION:" + row[LOCATION]\
             + "\nSEQUENCE:1" \
             + "\nSTATUS:CONFIRMED" \
-            + "\nSUMMARY:" + row[TITLE]\
+            + "\nSUMMARY:" + row[CODE]\
             + "\nTRANSP:OPAQUE" \
             + "\nEND:VEVENT\n"
 
@@ -312,7 +319,7 @@ row = getRawRow(fi)
 
 print "-----------------------"
 i = 0               # number of rows to read from input
-while (i!= 300):
+while (i!= 241):
     # extract the raw html data in a single row
     row = getRawRow(fi) 
     currentCourse = ""
