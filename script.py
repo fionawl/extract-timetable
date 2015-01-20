@@ -73,18 +73,46 @@ def extract_courseCode(href):
         return href.split("#")[1]
     return href
 
-def extract_val(s):
-    i = 0
+#def extract_val(s):
+    #i = 0
 
-    while (i < len (s)):
-        if s[i] == '>':
-            start = i
-            end = s[i+1:].index('<') + i
-            if end - start > 1:
-                return s[start+1:end+1]
-        i = i + 1
-    return s
+    #while (i < len (s)):
+        #if s[i] == '>':
+            #start = i
+            #end = s[i+1:].index('<') + i
+            #if end - start > 1:
+                #return s[start+1:end+1]
+        #i = i + 1
+    #return s
 
+
+#''' Extract the human-readable text content within the given html tags '''
+
+#def extract_str(s):
+    #i = 0
+
+    #while (i < len (s)):
+        #if s[i] == '>':
+            #start = i
+            #s0 = s[i+1:]
+            #return s0.split("<")[0]
+        #i = i + 1
+    #return s
+
+##print(extract_str("<><><>hello<>"))
+
+
+
+
+
+
+def extract_str(s):
+    s0 = s.split(">")
+    for thing in s0:
+        if "</" in thing:
+            if len(thing.split("</")[0]) > 0:
+                return thing.split("</")[0]
+    
 
 ''' Extracts content in a single html row(within <tr> </tr> tags).
 '''
@@ -112,32 +140,6 @@ def getRawRow(fo):
         return extract(unproc, tag)[0]
 
     return None
-
-''' Extract the human-readable text content within the given html tags '''
-
-def extract_str(s):
-    i = 0
-    print "IN EXTRACT_STR"
-    print "str: ", s
-
-    while (i < len (s)):
-        if s[i] == '>':
-            start = i
-            print 'start', start
-            s0 = s[i+1:]
-            print "s0", s0 
-            print 'end', 
-            end = s0.index('<') + i
-            if end - start > 1:
-               print "FINALLY THE INNER CONTENT"
-               return s[start+1:end+1]
-        print "done an itr"
-        i = i + 1
-    return s
-
-#print(extract_str("<><><>hello<>"))
-
-
 
 ''' From a single row's html content, return an array of a course's information.
     The array is in the format: 
@@ -169,38 +171,46 @@ courseInfo = {CODE: 0,
         INSTRUCTOR: 7}
 def processRow(row, currentCourse):
 
-    #print('in processRow')
-    #print('row:', row)
-
     cells = extract(row, "td")
-    print("-------------------")
-    print ("HERE ARE THE CELLS")
-
+    #print("-------------------")
+    #print ("HERE ARE THE CELLS")
+    data = {} 
+    print "cell 0", cells[0]
+    j = 0 
     for cell in cells: 
-        print "cell"
-        print (cell)
-        print ("cell content: ")
+        print "cell #", j
         print (extract_str(cell))
-    
+        j = j + 1
     print ("no more cells")
-    #print() 
+    print() 
+    print "currentCourse: ", currentCourse
+    if currentCourse == '':
+        data[courseInfo[CODE]] = extract_str(cells[0])
+        print "course", extract_str(cells[0]) 
+        currentCourse = extract_str(cells[0]) 
 
-    courseCode = extract_courseCode(cells[courseInfo['code']])
-    if courseCode == "":
-        courseCode = currentCourse         # previously recorded course
+        print currentCourse
     else: 
-        currentCourse = courseCode         # new course info read
+        data[courseInfo[CODE]] = currentCourse
 
-    courseType = courseCode[-3]
-
-    return  ([courseCode, \
-            cells[courseInfo['title']], \
-            courseType, \
-            [cells[courseInfo['semester']]], \
-            [cells[courseInfo['section']]], \
-            [cells[courseInfo['time']]], \
-            [cells[courseInfo['location']]], \
-            [cells[courseInfo['instructor']]]], currentCourse)
+    print "currentCourse: ", currentCourse
+    data[courseInfo[TITLE]] = extract_str(cells[2])
+    data[courseInfo[TYPE]] = currentCourse[-1]
+    data[courseInfo[SEMESTER]] = extract_str(cells[1])
+    data[courseInfo[SECTION]] = extract_str(cells[3])
+    data[courseInfo[TIMES]] = extract_str(cells[5])
+    data[courseInfo[LOCATION]] = extract_str(cells[6])
+    data[courseInfo[INSTRUCTOR]] = extract_str(cells[7])
+ 
+    return data, currentCourse 
+    #return  ([courseCode, \
+            #cells[courseInfo['title']], \
+            #courseType, \
+            #[cells[courseInfo['semester']]], \
+            #[cells[courseInfo['section']]], \
+            #[cells[courseInfo['time']]], \
+            #[cells[courseInfo['location']]], \
+            #[cells[courseInfo['instructor']]]], currentCourse)
 
 
 '''
@@ -279,6 +289,7 @@ def rowToICalEvent(row):
 
 ''' do the magic.
 '''
+
 processedRows = []
 fi = open("csc.html", "r+")
 fo = open("output.ical", "wb")
